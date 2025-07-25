@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dinamik Yatırımcı Sunumu ve Finansal Simülatör</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; scroll-behavior: smooth; }
+        .section-title { font-size: 2.25rem; font-weight: 800; color: #111827; border-bottom: 4px solid #4f46e5; padding-bottom: 0.5rem; display: inline-block; }
+        .card { background-color: white; border-radius: 0.75rem; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1); border: 1px solid #e5e7eb; padding: 1.5rem; transition: all 0.3s ease; }
+        .card:hover { transform: translateY(-5px); box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -2px rgb(0 0 0 / 0.1); }
+        .form-input { width: 100%; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem; transition: all 0.2s ease; }
+        .form-input:focus { border-color: #4f46e5; box-shadow: 0 0 0 2px #c7d2fe; outline: none; }
+        .export-button { display: inline-flex; align-items: center; padding: 0.25rem 0.5rem; margin-left: 0.75rem; font-size: 0.75rem; font-weight: 500; color: #4f46e5; background-color: #eef2ff; border-radius: 9999px; cursor: pointer; transition: all 0.2s ease; }
+        .export-button:hover { background-color: #c7d2fe; color: #3730a3; }
+        .add-button { background-color: #34d399; color: white; padding: 0.5rem 1rem; border-radius: 0.5rem; font-weight: 600; transition: background-color 0.2s; border: none; cursor: pointer; }
+        .add-button:hover { background-color: #10b981; }
+        .delete-button { background-color: #ef4444; color: white; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; cursor: pointer; transition: background-color 0.2s; border: none; }
+        .delete-button:hover { background-color: #dc2626; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800">
+
+    <!-- Header & Navigasyon -->
+    <header class="bg-white/80 backdrop-blur-lg sticky top-0 z-50 shadow-sm">
+        <nav class="container mx-auto px-6 py-3 flex justify-between items-center">
+            <div>
+                <input type="text" id="company-name-input" placeholder="Şirket Adınızı Girin..." class="text-xl md:text-2xl font-bold text-slate-900 bg-transparent border-b-2 border-transparent focus:border-indigo-500 outline-none transition duration-300">
+            </div>
+            <div class="flex items-center space-x-6">
+                <div class="hidden md:flex space-x-6">
+                    <a href="#karlilik" class="text-slate-600 hover:text-indigo-600 font-semibold">Kâr Projeksiyonu</a>
+                    <a href="#maliyetler" class="text-slate-600 hover:text-indigo-600 font-semibold">Maliyetler</a>
+                    <a href="#urun-analizi" class="text-slate-600 hover:text-indigo-600 font-semibold">Ürünler</a>
+                    <a href="#hakkimizda" class="text-slate-600 hover:text-indigo-600 font-semibold">Profil</a>
+                </div>
+                <button id="clear-all-button" class="bg-red-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-600 transition duration-300 text-sm">Tümünü Temizle</button>
+            </div>
+        </nav>
+    </header>
+
+    <main class="container mx-auto p-4 sm:p-6 md:p-8" id="main-content">
+
+        <!-- 1. Giriş Bölümü -->
+        <section class="text-center py-16">
+            <h1 class="text-4xl md:text-5xl font-extrabold text-slate-900 leading-tight">
+                <span id="company-name-h1">Şirketinizin</span> Yatırımcı Sunumu
+            </h1>
+            <p class="mt-4 text-lg md:text-xl text-slate-600 max-w-3xl mx-auto">
+                Bu dinamik araç ile şirketinizin finansal yol haritasını, kârlılık potansiyelini ve stratejik hedeflerini kolayca modelleyin ve sunun.
+            </p>
+            <button id="pdf-export-button" class="mt-8 bg-indigo-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-indigo-700 transition duration-300">
+                Raporu PDF İndir
+            </button>
+        </section>
+
+        <!-- 2. Kâr Projeksiyonu ve Analizi -->
+        <section id="karlilik" class="py-16 bg-white -mx-4 sm:-mx-8 px-4 sm:px-8 rounded-2xl shadow-lg">
+            <div class="text-center mb-12">
+                <h2 class="section-title">Kâr Projeksiyonu ve Analizi</h2>
+                <p class="mt-4 text-lg text-slate-600 max-w-3xl mx-auto">Üretim planınıza göre aylık kâr projeksiyonunuzu anında görün ve gelirinizin dağılımını analiz edin.</p>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <div class="lg:col-span-1 space-y-6">
+                    <div class="card">
+                        <h3 class="text-xl font-bold mb-4">Satış ve Fiyat Girdileri</h3>
+                        <div class="space-y-4">
+                            <div id="product-financial-inputs">
+                                <!-- Dinamik Fiyat Girdileri -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="lg:col-span-2 card min-h-[500px] flex flex-col items-center justify-center space-y-8">
+                    <div>
+                        <h3 class="text-xl font-bold mb-4 text-center">Gelir Dağılım Projeksiyonu</h3>
+                        <div class="w-full max-w-md mx-auto h-64">
+                            <canvas id="profitProjectionChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="w-full border-t pt-8">
+                        <h3 class="text-xl font-bold mb-4 text-center">Başa Baş Analizi Grafiği</h3>
+                        <div class="w-full h-64">
+                            <canvas id="breakEvenChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 3. Maliyet Yapısı Bölümü -->
+        <section id="maliyetler" class="py-16">
+            <div class="text-center mb-12">
+                <h2 class="section-title">Maliyet Yapısının Şeffaf Analizi</h2>
+            </div>
+            <div class="card mb-12">
+                <h3 class="text-2xl font-bold mb-6 text-slate-800 flex items-center">İnteraktif Personel Gider Simülatörü (Aylık)<button class="export-button" onclick="exportPersonnelToExcel()">Excel</button></h3>
+                <div class="grid grid-cols-1 lg:grid-cols-5 gap-8 items-center">
+                    <div class="lg:col-span-3">
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full text-sm" id="personnel-table">
+                                <thead class="bg-slate-50"><tr><th class="px-2 py-2 text-left">Pozisyon</th><th class="px-2 py-2 text-center">Kişi</th><th class="px-2 py-2 text-right">Net Maaş</th><th class="px-2 py-2 text-right">SGK vb.</th><th class="px-2 py-2 text-right">Toplam</th><th class="px-2 py-2"></th></tr></thead>
+                                <tbody id="yonetim-personnel-body" class="personnel-group-body">
+                                    <tr class="bg-slate-100 font-bold"><td colspan="6" class="px-4 py-2">Yönetim Personeli</td></tr>
+                                </tbody>
+                                <tbody id="uretim-personnel-body" class="personnel-group-body">
+                                     <tr class="bg-slate-100 font-bold"><td colspan="6" class="px-4 py-2">Üretim Personeli</td></tr>
+                                </tbody>
+                                <tfoot id="personnel-table-foot">
+                                    <tr class="bg-slate-50"><td colspan="6" class="p-2"><button data-action="add-personnel" data-type="yonetim" class="add-button w-full">Yönetim Personeli Ekle</button></td></tr>
+                                    <tr class="bg-slate-50"><td colspan="6" class="p-2"><button data-action="add-personnel" data-type="uretim" class="add-button w-full">Üretim Personeli Ekle</button></td></tr>
+                                    <tr class="border-t-2 border-slate-300"><td class="pt-3 font-bold">Toplam Net Maaş</td><td></td><td id="total-net-salary" class="pt-3 text-right font-bold"></td><td id="total-sgk" class="pt-3 text-right font-bold"></td><td></td><td></td></tr>
+                                    <tr><td colspan="5" class="pt-3 text-lg font-bold">PERSONEL GENEL TOPLAM</td><td id="grand-total-personnel-cost" class="pt-3 text-lg text-right font-extrabold text-indigo-600"></td></tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="lg:col-span-2"><canvas id="personnelCostChart"></canvas></div>
+                </div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div class="card"><h3 class="text-2xl font-bold mb-6 text-slate-800 flex items-center">Kira Giderleri (Aylık)<button class="export-button" onclick="exportRentToExcel()">Excel</button></h3><div class="grid grid-cols-1 sm:grid-cols-2 gap-8 items-center"><div id="rent-cost-table"></div><div><canvas id="rentCostChart"></canvas></div></div></div>
+                <div class="card"><h3 class="text-2xl font-bold mb-6 text-slate-800 flex items-center">Operasyonel Giderler (Aylık)<button class="export-button" onclick="exportOperationalToExcel()">Excel</button></h3><div class="grid grid-cols-1 sm:grid-cols-2 gap-8 items-center"><div id="operational-cost-table"></div><div><canvas id="operationalCostChart"></canvas></div></div></div>
+            </div>
+        </section>
+
+        <!-- 4. Ürün Analizi Bölümü -->
+        <section id="urun-analizi" class="py-16">
+            <div class="text-center mb-12">
+                <h2 class="section-title">Ürünlerin Maliyet DNA'sı</h2>
+                <p class="mt-4 text-lg text-slate-600 max-w-2xl mx-auto">İstediğiniz kadar ürün ekleyin ve her birinin birim değişken maliyetini ve günlük üretim miktarını girin.</p>
+            </div>
+            <div id="product-analysis-container" class="space-y-8"></div>
+            <div class="text-center mt-8">
+                <button id="add-product-button" class="add-button text-lg px-8 py-3">Yeni Ürün Ekle</button>
+            </div>
+        </section>
+        
+        <!-- 5. Genel Özet Bölümü -->
+        <section id="genel-ozet" class="py-16">
+            <div class="text-center mb-12">
+                <h2 class="section-title">Genel Özet</h2>
+            </div>
+            <div class="card max-w-4xl mx-auto">
+                <h3 class="text-2xl font-bold mb-4">Aylık Projeksiyon Özeti</h3>
+                <table class="w-full">
+                    <tbody>
+                        <tr class="border-b"><td class="py-3 font-medium text-slate-600">Aylık Toplam Üretim/Satış</td><td id="summary-total-units" class="py-3 text-right font-bold text-lg"></td></tr>
+                        <tr class="bg-slate-50 border-b"><td class="py-3 font-medium text-slate-600">Aylık Toplam Gelir</td><td id="summary-total-revenue" class="py-3 text-right font-bold text-lg text-blue-600"></td></tr>
+                        <tr class="border-b"><td class="py-3 font-medium text-slate-600">Aylık Toplam Gider</td><td id="summary-total-cost" class="py-3 text-right font-bold text-lg text-red-600"></td></tr>
+                        <tr class="bg-slate-50 border-b"><td class="py-3 font-medium text-slate-600">Aylık Net Kâr</td><td id="summary-net-profit" class="py-3 text-right font-extrabold text-xl"></td></tr>
+                        <tr class="border-b"><td class="py-3 font-medium text-slate-600">Başa Baş Noktası (Birim)</td><td id="summary-breakeven-point" class="py-3 text-right font-bold text-lg text-indigo-600"></td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- 6. Şirket Profili Bölümü -->
+        <section id="hakkimizda" class="py-16">
+            <div class="text-center mb-12"><h2 class="section-title">Şirket Profili ve Marka Değeri</h2></div>
+            <div class="card lg:p-12 space-y-8">
+                 <div><label class="text-2xl font-bold text-slate-800" for="company-history">Şirket Geçmişi ve Değerleri</label><textarea id="company-history" rows="5" class="form-input mt-4 w-full" placeholder="Şirketinizin kuruluş hikayesini, temel değerlerini ve pazardaki konumunu buraya yazın..."></textarea></div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 text-center">
+                    <div class="p-6 bg-slate-50 rounded-lg border"><label class="text-2xl font-bold text-slate-800 mb-4" for="company-mission">Misyonumuz</label><textarea id="company-mission" rows="4" class="form-input mt-4 w-full" placeholder="Şirketinizin misyonunu tanımlayın..."></textarea></div>
+                    <div class="p-6 bg-slate-50 rounded-lg border"><label class="text-2xl font-bold text-slate-800 mb-4" for="company-vision">Vizyonumuz</label><textarea id="company-vision" rows="4" class="form-input mt-4 w-full" placeholder="Geleceğe yönelik vizyonunuzu açıklayın..."></textarea></div>
+                </div>
+            </div>
+        </section>
+    </main>
+    
+    <footer class="bg-slate-800 text-white mt-16"><div class="container mx-auto px-6 py-8 text-center"><p class="font-bold text-lg" id="company-name-footer">Şirket Adı</p><p class="text-slate-400 mt-2">Finansal Simülasyon ve Yatırımcı Sunumu</p></div></footer>
+
+<script>
+// --- GLOBAL HELPERS ---
+const formatCurrency = (value) => new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' }).format(value || 0);
+const formatNumber = (value, digits = 0) => new Intl.NumberFormat('tr-TR', { minimumFractionDigits: digits, maximumFractionDigits: digits }).format(value || 0);
+const parseLocalNumber = (str) => {
+    if (typeof str !== 'string') return str;
+    return parseFloat(str.replace(/\./g, '').replace(',', '.')) || 0;
+};
+const generateId = () => `id_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+// --- DATA & STATE MANAGEMENT ---
+const STORAGE_KEY = 'yatirimciSunumuState_v6_final';
+const AMBALAJ_MALIYETI_BIRIM = 15.00;
+const SGK_RATE = 0.6926;
+const AYLIK_IS_GUNU = 22;
+let companyName = "Şirketiniz";
+let charts = {};
+let dom = {};
+
+// --- CORE LOGIC ---
+function fullRecalculation() {
+    calculateAllFixedCosts();
+    saveState();
+}
+
+function updateCompanyBranding() {
+    companyName = dom.companyNameInput.value.trim() || "Şirketiniz";
+    dom.companyNameH1.textContent = companyName;
+    dom.companyNameFooter.textContent = companyName;
+    document.title = `${companyName} - Dinamik Yatırımcı Sunumu`;
+    saveState();
+}
+
+function calculateAllFixedCosts() {
+    let totalNetSalary = 0, totalSgk = 0, totalYonetimNet = 0, totalUretimNet = 0;
+    
+    dom.personnelTable.querySelectorAll('tr.personnel-data-row').forEach(row => {
+        const type = row.closest('tbody').id.includes('yonetim') ? 'yonetim' : 'uretim';
+        const count = parseInt(row.querySelector('.count-input').value) || 0;
+        const salary = parseLocalNumber(row.querySelector('.salary-input').value);
+        const totalSalary = count * salary, sgk = totalSalary * SGK_RATE, totalCost = totalSalary + sgk;
+        row.querySelector('.sgk-cost').textContent = formatCurrency(sgk);
+        row.querySelector('.total-cost').textContent = formatCurrency(totalCost);
+        totalNetSalary += totalSalary; totalSgk += sgk;
+        if(type === 'yonetim') totalYonetimNet += totalSalary; else totalUretimNet += totalSalary;
+    });
+    
+    const totalPersonnelCost = totalNetSalary + totalSgk;
+    document.getElementById('total-net-salary').textContent = formatCurrency(totalNetSalary);
+    document.getElementById('total-sgk').textContent = formatCurrency(totalSgk);
+    document.getElementById('grand-total-personnel-cost').textContent = formatCurrency(totalPersonnelCost);
+    if(charts.personnel) {
+        charts.personnel.data.datasets[0].data = [totalYonetimNet, totalUretimNet, totalSgk];
+        charts.personnel.update();
+    }
+
+    const rentNet = parseLocalNumber(document.getElementById('rent-net-input').value);
+    const rentStopaj = parseLocalNumber(document.getElementById('rent-stopaj-input').value);
+    const totalRentCost = rentNet + rentStopaj;
+    document.getElementById('rent-total').textContent = formatCurrency(totalRentCost);
+    if(charts.rent) {
+        charts.rent.data.datasets[0].data = [rentNet, rentStopaj];
+        charts.rent.update();
+    }
+
+    const opYakit = parseLocalNumber(document.getElementById('op-yakit-input').value);
+    const opEnerji = parseLocalNumber(document.getElementById('op-enerji-input').value);
+    const opMutfak = parseLocalNumber(document.getElementById('op-mutfak-input').value);
+    const totalOperationalCost = opYakit + opEnerji + opMutfak;
+    document.getElementById('op-total').textContent = formatCurrency(totalOperationalCost);
+    if(charts.operational) {
+        charts.operational.data.datasets[0].data = [opYakit, opEnerji, opMutfak];
+        charts.operational.update();
+    }
+
+    const newTotalFixedCost = totalPersonnelCost + totalRentCost + totalOperationalCost;
+    updateProfitProjection(newTotalFixedCost);
+}
+
+function updateProfitProjection(sabitMaliyet) {
+    let toplamGelir = 0;
+    let toplamDegiskenMaliyet = 0;
+    let aylikToplamUretim = 0;
+    
+    const productCards = document.querySelectorAll('.product-card');
+    const productCount = productCards.length;
+    const daysPerProduct = productCount > 0 ? AYLIK_IS_GUNU / productCount : 0;
+
+    productCards.forEach(card => {
+        const productId = card.id;
+        const priceInput = document.querySelector(`.product-financial-input-group[data-product-id="${productId}"] .product-price-input`);
+        const price = priceInput ? parseLocalNumber(priceInput.value) : 0;
+        
+        let dailyProduction = 0;
+        card.querySelectorAll('.ingredient-row .quantity-input').forEach(input => {
+            dailyProduction += parseLocalNumber(input.value);
+        });
+
+        const monthlySales = dailyProduction * daysPerProduct;
+        aylikToplamUretim += monthlySales;
+        const variableCost = parseFloat(card.querySelector('.total-variable-cost-value').value) || 0;
+        
+        toplamGelir += price * monthlySales;
+        toplamDegiskenMaliyet += variableCost * monthlySales;
+    });
+
+    const netKar = toplamGelir - toplamDegiskenMaliyet - sabitMaliyet;
+    
+    // Update main projection card
+    if (dom.simResults.toplamGelir) {
+        dom.simResults.toplamGelir.textContent = formatCurrency(toplamGelir);
+        dom.simResults.toplamDegisken.textContent = formatCurrency(toplamDegiskenMaliyet);
+        dom.simResults.toplamSabit.textContent = formatCurrency(sabitMaliyet);
+        dom.simResults.netKar.textContent = formatCurrency(netKar);
+    }
+    
+    updateProjectionChart(toplamDegiskenMaliyet, sabitMaliyet, netKar);
+
+    // Başa baş hesaplamaları
+    const ortalamaBirimFiyat = aylikToplamUretim > 0 ? toplamGelir / aylikToplamUretim : 0;
+    const ortalamaBirimDegiskenMaliyet = aylikToplamUretim > 0 ? toplamDegiskenMaliyet / aylikToplamUretim : 0;
+    const katkiPayi = ortalamaBirimFiyat - ortalamaBirimDegiskenMaliyet;
+    const basaBasAdet = katkiPayi > 0 ? sabitMaliyet / katkiPayi : 0;
+
+    // Update Summary Table
+    if (dom.summary.totalUnits) {
+        dom.summary.totalUnits.textContent = `${formatNumber(aylikToplamUretim)} birim`;
+        dom.summary.totalRevenue.textContent = formatCurrency(toplamGelir);
+        dom.summary.totalCost.textContent = formatCurrency(toplamDegiskenMaliyet + sabitMaliyet);
+        dom.summary.netProfit.textContent = formatCurrency(netKar);
+        dom.summary.breakevenPoint.textContent = `${formatNumber(basaBasAdet)} birim`;
+
+        if (netKar >= 0) {
+            dom.summary.netProfit.classList.remove('text-red-600');
+            dom.summary.netProfit.classList.add('text-green-600');
+        } else {
+            dom.summary.netProfit.classList.remove('text-green-600');
+            dom.summary.netProfit.classList.add('text-red-600');
+        }
+    }
+
+    updateBreakEvenChart(sabitMaliyet, ortalamaBirimDegiskenMaliyet, ortalamaBirimFiyat, basaBasAdet, aylikToplamUretim);
+}
+
+function calculateRecipeCost(productId) {
+    const card = document.getElementById(productId);
+    if (!card) return;
+    
+    let totalHammaddeCost = 0;
+    let totalHammaddeQuantity = 0;
+
+    card.querySelectorAll('.ingredient-row').forEach(row => {
+        const quantity = parseLocalNumber(row.querySelector('.quantity-input').value);
+        const price = parseLocalNumber(row.querySelector('.price-input').value);
+        const total = quantity * price;
+        row.querySelector('.total-cost').textContent = formatCurrency(total);
+        totalHammaddeCost += total;
+        totalHammaddeQuantity += quantity;
+    });
+    
+    const dailyProduction = totalHammaddeQuantity;
+    const hammaddePerUnit = dailyProduction > 0 ? totalHammaddeCost / dailyProduction : 0;
+    const totalVariableCost = hammaddePerUnit + AMBALAJ_MALIYETI_BIRIM;
+    
+    card.querySelector('.hammadde-total').textContent = formatCurrency(totalHammaddeCost);
+    card.querySelector('.daily-production-output').textContent = formatNumber(dailyProduction);
+    card.querySelector('.unit-hammadde-cost').textContent = formatCurrency(hammaddePerUnit);
+    card.querySelector('.unit-variable-cost').textContent = formatCurrency(totalVariableCost);
+    card.querySelector('.total-variable-cost-value').value = totalVariableCost;
+    
+    fullRecalculation();
+}
+
+
+// --- DYNAMIC ELEMENT CREATION ---
+function addPersonnelRow(type, data = {}) {
+    const tbody = document.getElementById(`${type}-personnel-body`);
+    const row = document.createElement('tr');
+    row.className = 'personnel-data-row';
+    row.innerHTML = `
+        <td class="px-2 py-2"><input type="text" placeholder="Pozisyon Adı" class="form-input" value="${data.name || ''}"></td>
+        <td class="px-2 py-2"><input type="number" value="${data.count || 1}" class="form-input text-center count-input"></td>
+        <td class="px-2 py-2"><input type="text" value="${formatNumber(data.salary || 0)}" class="form-input text-right salary-input"></td>
+        <td class="px-2 py-2 text-right sgk-cost">${formatCurrency(0)}</td>
+        <td class="px-2 py-2 text-right total-cost">${formatCurrency(0)}</td>
+        <td class="px-2 py-2 text-center"><button class="delete-button" data-action="delete-personnel">-</button></td>
+    `;
+    tbody.appendChild(row);
+    addFormattersToInput(row.querySelector('.salary-input'));
+    row.querySelectorAll('input').forEach(input => input.addEventListener('input', fullRecalculation));
+}
+
+function addProduct(data = {}) {
+    const productId = data.id || generateId();
+    const productCard = document.createElement('div');
+    productCard.className = 'card product-card';
+    productCard.id = productId;
+    productCard.innerHTML = `
+        <div class="flex justify-between items-start mb-4">
+            <input type="text" placeholder="Ürün Adı" class="product-name-input text-2xl font-bold border-b-2 p-1 focus:outline-none focus:border-indigo-500" value="${data.name || ''}">
+            <button class="delete-button" data-action="delete-product" data-product-id="${productId}">-</button>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="min-w-full"><thead class="bg-slate-50"><tr><th class="px-2 py-2 text-left">Malzeme</th><th class="px-2 py-2 text-right">Miktar (Kg)</th><th class="px-2 py-2 text-right">Birim Fiyat</th><th class="px-2 py-2 text-right">Toplam</th><th class="px-2 py-2"></th></tr></thead><tbody class="ingredient-body divide-y"></tbody></table>
+        </div>
+        <div class="text-center mt-4"><button class="add-button w-full" data-action="add-ingredient" data-product-id="${productId}">Yeni Hammadde Ekle</button></div>
+        <div class="mt-4 pt-4 border-t-2 space-y-2">
+            <div class="flex justify-between items-center"><span class="font-semibold">Günlük Toplam Hammadde Maliyeti:</span><span class="font-bold hammadde-total">${formatCurrency(0)}</span></div>
+            <div class="flex justify-between items-center"><span class="font-semibold">Günlük Üretim Miktarı (Birim):</span><span class="font-bold daily-production-output">0</span></div>
+            <div class="flex justify-between items-center"><span class="font-semibold">1 Birim Hammadde Maliyeti:</span><span class="font-bold unit-hammadde-cost">${formatCurrency(0)}</span></div>
+            <hr>
+            <div class="flex justify-between items-center text-xl p-3 bg-green-50 rounded-lg">
+                <span class="font-bold text-green-800">1 Birim Değişken Maliyet (Ambalaj Dahil):</span>
+                <span class="font-extrabold text-green-900 unit-variable-cost">${formatCurrency(AMBALAJ_MALIYETI_BIRIM)}</span>
+                <input type="hidden" class="total-variable-cost-value" value="${AMBALAJ_MALIYETI_BIRIM}">
+            </div>
+        </div>
+    `;
+    dom.productAnalysisContainer.appendChild(productCard);
+    
+    if (data.ingredients && data.ingredients.length > 0) {
+        data.ingredients.forEach(ing => addIngredientRow(productId, ing));
+    } else {
+        addIngredientRow(productId);
+    }
+    
+    addProductToSimulator(productId, data.sim || {});
+}
+
+function addIngredientRow(productId, data = {}) {
+    const tbody = document.querySelector(`#${productId} .ingredient-body`);
+    const row = document.createElement('tr');
+    row.className = 'ingredient-row';
+    row.innerHTML = `
+        <td class="px-2 py-2"><input type="text" placeholder="Hammadde Adı" class="form-input" value="${data.name || ''}"></td>
+        <td class="px-2 py-2"><input type="text" value="${formatNumber(data.quantity || 0)}" class="form-input text-right quantity-input"></td>
+        <td class="px-2 py-2"><input type="text" value="${formatNumber(data.price || 0)}" class="form-input text-right price-input"></td>
+        <td class="px-2 py-2 text-right total-cost">${formatCurrency(0)}</td>
+        <td class="px-2 py-2 text-center"><button class="delete-button" data-action="delete-ingredient">-</button></td>
+    `;
+    tbody.appendChild(row);
+    row.querySelectorAll('.quantity-input, .price-input').forEach(input => {
+        addFormattersToInput(input);
+        input.addEventListener('input', () => calculateRecipeCost(productId));
+    });
+}
+
+function addProductToSimulator(productId, data = {}) {
+    const productName = document.querySelector(`#${productId} .product-name-input`).value || 'Yeni Ürün';
+    const group = document.createElement('div');
+    group.className = 'product-financial-input-group mt-4 p-3 border rounded-lg';
+    group.dataset.productId = productId;
+    group.innerHTML = `
+        <p class="font-bold text-md mb-2 product-name-sim-display">${productName}</p>
+        <div>
+            <label class="block text-xs font-medium text-gray-600">Birim Satış Fiyatı</label>
+            <input type="text" value="${formatNumber(data.price || 100)}" class="form-input text-right product-price-input">
+        </div>
+    `;
+    dom.productFinancialInputs.appendChild(group);
+    group.querySelectorAll('input').forEach(input => {
+        addFormattersToInput(input);
+        input.addEventListener('input', fullRecalculation);
+    });
+    document.querySelector(`#${productId} .product-name-input`).addEventListener('input', (e) => {
+        const newName = e.target.value || 'Yeni Ürün';
+        group.querySelector('.product-name-sim-display').textContent = newName;
+        fullRecalculation();
+    });
+}
+
+
+// --- EVENT HANDLERS & INITIALIZATION ---
+function handleDynamicClicks(e) {
+    const action = e.target.dataset.action;
+    if (!action) return;
+
+    if (action === 'add-personnel') addPersonnelRow(e.target.dataset.type);
+    else if (action === 'delete-personnel') e.target.closest('tr').remove();
+    else if (action === 'add-ingredient') addIngredientRow(e.target.dataset.productId);
+    else if (action === 'delete-ingredient') e.target.closest('tr').remove();
+    else if (action === 'delete-product') {
+        const productId = e.target.dataset.productId;
+        document.getElementById(productId)?.remove();
+        document.querySelector(`.product-financial-input-group[data-product-id="${productId}"]`)?.remove();
+    }
+    
+    fullRecalculation();
+}
+
+function addFormattersToInput(input) {
+    if (!input) return;
+    input.addEventListener('focus', (e) => { e.target.value = parseLocalNumber(e.target.value) || ''; });
+    input.addEventListener('blur', (e) => { if(e.target.value) e.target.value = formatNumber(parseLocalNumber(e.target.value)); });
+}
+
+// --- STATE MANAGEMENT ---
+function saveState() {
+    const state = {
+        companyName: dom.companyNameInput.value,
+        profile: {
+            history: dom.profileInputs.history.value,
+            mission: dom.profileInputs.mission.value,
+            vision: dom.profileInputs.vision.value,
+        },
+        fixedCosts: {
+            rentNet: document.getElementById('rent-net-input').value,
+            rentStopaj: document.getElementById('rent-stopaj-input').value,
+            opYakit: document.getElementById('op-yakit-input').value,
+            opEnerji: document.getElementById('op-enerji-input').value,
+            opMutfak: document.getElementById('op-mutfak-input').value,
+        },
+        personnel: {
+            yonetim: [],
+            uretim: [],
+        },
+        products: [],
+    };
+    
+    document.querySelectorAll('#yonetim-personnel-body .personnel-data-row').forEach(r => {
+        state.personnel.yonetim.push({
+            name: r.querySelector('input:nth-child(1)').value,
+            count: r.querySelector('.count-input').value,
+            salary: r.querySelector('.salary-input').value,
+        });
+    });
+    document.querySelectorAll('#uretim-personnel-body .personnel-data-row').forEach(r => {
+        state.personnel.uretim.push({
+            name: r.querySelector('input:nth-child(1)').value,
+            count: r.querySelector('.count-input').value,
+            salary: r.querySelector('.salary-input').value,
+        });
+    });
+
+    document.querySelectorAll('.product-card').forEach(card => {
+        const productId = card.id;
+        const productData = {
+            id: productId,
+            name: card.querySelector('.product-name-input').value,
+            ingredients: [],
+            sim: {},
+        };
+        card.querySelectorAll('.ingredient-row').forEach(row => {
+            productData.ingredients.push({
+                name: row.querySelector('input:nth-child(1)').value,
+                quantity: row.querySelector('.quantity-input').value,
+                price: row.querySelector('.price-input').value,
+            });
+        });
+        const simGroup = document.querySelector(`.product-financial-input-group[data-product-id="${productId}"]`);
+        if (simGroup) {
+            productData.sim.price = simGroup.querySelector('.product-price-input').value;
+        }
+        state.products.push(productData);
+    });
+
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+function loadState() {
+    const savedState = localStorage.getItem(STORAGE_KEY);
+    if (!savedState) return false;
+    
+    const state = JSON.parse(savedState);
+    
+    dom.companyNameInput.value = state.companyName || '';
+    dom.profileInputs.history.value = state.profile.history || '';
+    dom.profileInputs.mission.value = state.profile.mission || '';
+    dom.profileInputs.vision.value = state.profile.vision || '';
+    
+    document.getElementById('rent-net-input').value = state.fixedCosts.rentNet || '0';
+    document.getElementById('rent-stopaj-input').value = state.fixedCosts.rentStopaj || '0';
+    document.getElementById('op-yakit-input').value = state.fixedCosts.opYakit || '0';
+    document.getElementById('op-enerji-input').value = state.fixedCosts.opEnerji || '0';
+    document.getElementById('op-mutfak-input').value = state.fixedCosts.opMutfak || '0';
+    
+    state.personnel.yonetim.forEach(p => addPersonnelRow('yonetim', {name: p.name, count: p.count, salary: p.salary}));
+    state.personnel.uretim.forEach(p => addPersonnelRow('uretim', {name: p.name, count: p.count, salary: p.salary}));
+    
+    if (state.products && state.products.length > 0) {
+        state.products.forEach(p => addProduct(p));
+    }
+    
+    return true;
+}
+
+// --- INITIALIZE APP ---
+function initializeApp() {
+    // Populate dom object now that the DOM is ready
+    dom.companyNameInput = document.getElementById('company-name-input');
+    dom.companyNameH1 = document.getElementById('company-name-h1');
+    dom.companyNameFooter = document.getElementById('company-name-footer');
+    dom.simResults = {
+        toplamGelir: document.getElementById('res-toplam-gelir'),
+        toplamDegisken: document.getElementById('res-toplam-degisken'),
+        toplamSabit: document.getElementById('res-toplam-sabit'),
+        netKar: document.getElementById('res-net-kar'),
+    };
+    dom.summary = {
+        totalUnits: document.getElementById('summary-total-units'),
+        totalRevenue: document.getElementById('summary-total-revenue'),
+        totalCost: document.getElementById('summary-total-cost'),
+        netProfit: document.getElementById('summary-net-profit'),
+        breakevenPoint: document.getElementById('summary-breakeven-point'),
+    };
+    dom.productFinancialInputs = document.getElementById('product-financial-inputs');
+    dom.productAnalysisContainer = document.getElementById('product-analysis-container');
+    dom.personnelTable = document.getElementById('personnel-table');
+    dom.profileInputs = {
+        history: document.getElementById('company-history'),
+        mission: document.getElementById('company-mission'),
+        vision: document.getElementById('company-vision'),
+    };
+
+    // Event Listeners
+    dom.companyNameInput.addEventListener('input', updateCompanyBranding);
+    document.getElementById('add-product-button').addEventListener('click', () => { addProduct(); fullRecalculation(); });
+    document.addEventListener('click', handleDynamicClicks);
+    Object.values(dom.profileInputs).forEach(input => input.addEventListener('input', saveState));
+    document.getElementById('pdf-export-button').addEventListener('click', exportPDF);
+
+    // Initial Renders
+    renderFixedCostTables();
+    
+    // Initialize Charts
+    charts.personnel = new Chart(document.getElementById('personnelCostChart').getContext('2d'), { type: 'pie', data: { labels: ['Yönetim Net Maaş', 'Üretim Net Maaş', 'SGK vb. Giderler'], datasets: [{ data: [0,0,0], backgroundColor: ['#4338ca', '#6366f1', '#a5b4fc'], borderWidth: 2 }] }, options: { responsive: true, plugins: { legend: { display: false }, tooltip: { callbacks: { label: (c) => `${c.label}: ${formatCurrency(c.parsed)}` } } } } });
+    charts.rent = new Chart(document.getElementById('rentCostChart').getContext('2d'), { type: 'pie', data: { labels: ['Net Kira', 'Stopaj'], datasets: [{ data: [0,0], backgroundColor: ['#1d4ed8', '#60a5fa'], borderWidth: 2 }] }, options: { responsive: true, plugins: { legend: { display: false }, tooltip: { callbacks: { label: (c) => `${c.label}: ${formatCurrency(c.parsed)}` } } } } });
+    charts.operational = new Chart(document.getElementById('operationalCostChart').getContext('2d'), { type: 'pie', data: { labels: ['Yakıt', 'Enerji', 'Mutfak'], datasets: [{ data: [0,0,0], backgroundColor: ['#be123c', '#f43f5e', '#fda4af'], borderWidth: 2 }] }, options: { responsive: true, plugins: { legend: { display: false }, tooltip: { callbacks: { label: (c) => `${c.label}: ${formatCurrency(c.parsed)}` } } } } });
+    charts.projection = new Chart(document.getElementById('profitProjectionChart').getContext('2d'), { type: 'pie', data: { labels: ['Net Kâr', 'Değişken Maliyetler', 'Sabit Maliyetler'], datasets: [{ data: [0,0,0], backgroundColor: ['#10b981', '#f59e0b', '#ef4444'], borderWidth: 4, borderColor: '#ffffff' }] }, options: { responsive: true, plugins: { legend: { position: 'bottom' }, tooltip: { callbacks: { label: (c) => `${c.label}: ${formatCurrency(c.parsed)}` } } } } });
+    charts.breakEven = new Chart(document.getElementById('breakEvenChart').getContext('2d'), {
+        type: 'line',
+        data: {
+            labels: [],
+            datasets: [
+                {
+                    label: 'Toplam Gelir',
+                    data: [],
+                    borderColor: '#16a34a',
+                    tension: 0.1,
+                    fill: false
+                },
+                {
+                    label: 'Toplam Maliyet',
+                    data: [],
+                    borderColor: '#dc2626',
+                    tension: 0.1,
+                    fill: false
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: { ticks: { callback: (value) => formatCurrency(value) } },
+                x: { ticks: { callback: (value, index) => formatNumber(charts.breakEven.data.labels[index]) } }
+            }
+        }
+    });
+
+    // Load state or set defaults
+    if (!loadState()) {
+        addPersonnelRow('yonetim');
+        addProduct();
+    }
+    
+    // Final update
+    updateCompanyBranding();
+    fullRecalculation();
+}
+
+function renderFixedCostTables() {
+    document.getElementById('rent-cost-table').innerHTML = `<table class="min-w-full"><tbody><tr><td class="py-2">Net Kira</td><td class="py-2"><input id="rent-net-input" type="text" class="form-input text-right"></td></tr><tr><td class="py-2">Stopaj</td><td class="py-2"><input id="rent-stopaj-input" type="text" class="form-input text-right"></td></tr></tbody><tfoot class="border-t-2 border-slate-300"><tr><td class="pt-2 font-bold">TOPLAM</td><td id="rent-total" class="pt-2 text-right font-bold text-indigo-600"></td></tr></tfoot></table>`;
+    document.getElementById('operational-cost-table').innerHTML = `<table class="min-w-full"><tbody><tr><td class="py-2">Yakıt</td><td class="py-2"><input id="op-yakit-input" type="text" class="form-input text-right"></td></tr><tr><td class="py-2">Enerji</td><td class="py-2"><input id="op-enerji-input" type="text" class="form-input text-right"></td></tr><tr><td class="py-2">Mutfak</td><td class="py-2"><input id="op-mutfak-input" type="text" class="form-input text-right"></td></tr></tbody><tfoot class="border-t-2 border-slate-300"><tr><td class="pt-2 font-bold">TOPLAM</td><td id="op-total" class="pt-2 text-right font-bold text-indigo-600"></td></tr></tfoot></table>`;
+    document.querySelectorAll('#rent-cost-table input, #operational-cost-table input').forEach(input => {
+        addFormattersToInput(input);
+        input.addEventListener('input', fullRecalculation);
+    });
+}
+
+function updateProjectionChart(variable, fixed, net) {
+    const projectionChart = charts.projection;
+    if (!projectionChart) return;
+    
+    projectionChart.data.datasets[0].data = [
+        Math.max(0, net), 
+        variable, 
+        fixed
+    ];
+    projectionChart.update();
+}
+
+function updateBreakEvenChart(sabit, degisken, fiyat, basaBasAdet, aylikToplamUretim) {
+    const breakEvenChart = charts.breakEven;
+    if (!breakEvenChart) return;
+
+    const maxAdet = Math.max(1000, Math.ceil(basaBasAdet * 1.5), Math.ceil(aylikToplamUretim * 1.2)) || 1000;
+    const labels = [], gelirData = [], maliyetData = [];
+
+    for (let i = 0; i <= 10; i++) {
+        const adet = Math.round((maxAdet / 10) * i);
+        labels.push(adet);
+        gelirData.push(adet * fiyat);
+        maliyetData.push(sabit + (adet * degisken));
+    }
+
+    breakEvenChart.data.labels = labels;
+    breakEvenChart.data.datasets[0].data = gelirData;
+    breakEvenChart.data.datasets[1].data = maliyetData;
+    breakEvenChart.update();
+}
+
+function exportPDF() {
+    const btn = document.getElementById('pdf-export-button');
+    btn.textContent = 'PDF Oluşturuluyor...';
+    html2canvas(document.getElementById('main-content'), { scale: 2 }).then(canvas => {
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        const pdfWidth = pdf.internal.pageSize.getWidth(), pdfHeight = pdf.internal.pageSize.getHeight();
+        const imgHeight = canvas.height * pdfWidth / canvas.width;
+        let heightLeft = imgHeight, position = 0;
+        pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, position, pdfWidth, imgHeight);
+        heightLeft -= pdfHeight;
+        while (heightLeft > 0) {
+            position = heightLeft - imgHeight;
+            pdf.addPage();
+            pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, position, pdfWidth, imgHeight);
+            heightLeft -= pdfHeight;
+        }
+        pdf.save(`${companyName.replace(/ /g, '_')}-Yatirimci-Raporu.pdf`);
+        btn.textContent = 'Raporu PDF İndir';
+    });
+}
+
+document.addEventListener('DOMContentLoaded', initializeApp);
+
+</script>
+
+</body>
+</html>
